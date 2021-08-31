@@ -293,7 +293,11 @@ trait HasPermissions
      */
     public function getPermissionsViaRoles(): Collection
     {
-        return $this->loadMissing('roles', 'roles.permissions')
+        if (! $this->relationLoaded('roles')) {
+            $this->reloadRelation($this, 'roles');
+        }
+
+        return $this->loadMissing('roles.permissions')
             ->roles->flatMap(function ($role) {
                 return $role->permissions;
             })->sort()->values();
@@ -347,7 +351,7 @@ trait HasPermissions
 
         if ($model->exists) {
             $this->permissions()->sync($permissions, false);
-            $model->load('permissions');
+            $model->reloadRelation($model, 'permissions');
         } else {
             $class = \get_class($model);
 
@@ -357,7 +361,7 @@ trait HasPermissions
                         return;
                     }
                     $model->permissions()->sync($permissions, false);
-                    $model->load('permissions');
+                    $this->reloadRelation($model, 'permissions');
                 }
             );
         }
@@ -367,6 +371,17 @@ trait HasPermissions
         }
 
         return $this;
+    }
+
+    protected function reloadRelation($model, $relation)
+    {
+        $method = 'forgetModelCached' . ucfirst($relation);
+        if (method_exists($model, $method)) {
+            $model->$method();
+            $model->loadCachedRelation($relation);
+        } else {
+            $model->load($relation);
+        }
     }
 
     /**
@@ -398,7 +413,7 @@ trait HasPermissions
             $this->forgetCachedPermissions();
         }
 
-        $this->load('permissions');
+        $this->reloadRelation($this, 'permissions');
 
         return $this;
     }
