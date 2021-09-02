@@ -47,9 +47,6 @@ class PermissionRegistrar
     /** @var string */
     public static $cacheKey;
 
-    /** @var array */
-    private $cachedRoles = [];
-
     /**
      * PermissionRegistrar constructor.
      *
@@ -151,42 +148,107 @@ class PermissionRegistrar
     }
 
     /**
+     * Get field names of a model from db
+     */
+    private function getModelColumnListing($class)
+    {
+        $model = new $class;
+        $table = array_reverse(explode('.', $model->getTable()));
+        $schema = \Schema::connection($model->getConnectionName());
+        if (isset($table[1])) {
+            $schema->getConnection()->setDatabaseName($table[1]);
+        }
+
+        return $schema->getColumnListing($table[0]);
+    }
+
+    /**
+     * Array for cache alias
+     */
+    private function aliasModelsFields()
+    {
+        $alphas = range('a', 'n');
+
+        $alias = [];
+        $columns = array_unique(array_merge(
+            $this->getModelColumnListing($this->getRoleClass()),
+            $this->getModelColumnListing($this->getPermissionClass()),
+            ['roles']
+        ));
+        foreach ($columns as $i => $value) {
+            $alias[$alphas[$i] ?? $value] = $value;
+        }
+
+        return $alias;
+    }
+
+    /**
+     * Changes array keys with alias
+     *
+     * * @return \Illuminate\Support\Collection
+     */
+    private function aliasedFromArray(array $item, array $alias)
+    {
+        return collect($item)->keyBy(function ($value, $key) use ($alias) {
+            return $alias[$key] ?? $key;
+        });
+    }
+
+    /**
      * Load permissions from cache
      * This get cache and turns array into \Illuminate\Database\Eloquent\Collection
      */
     private function loadPermissions()
     {
-        if ($this->permissions !== null) {
+        if ($this->permissions) {
             return;
         }
 
-        $this->permissions = $this->cache->remember(self::$cacheKey, self::$cacheExpirationTime, function () {
-            // make the cache smaller using an array with only required fields
-            return $this->getPermissionClass()->select('id', 'id as i', 'name as n', 'guard_name as g')
-                ->with('roles:id,id as i,name as n,guard_name as g')->get()
-                ->map(function ($permission) {
-                    return $permission->only('i', 'n', 'g') +
-                        ['r' => $permission->roles->map->only('i', 'n', 'g')->all()];
-                })->all();
+        $roleClass = $this->getRoleClass();
+        $permissionClass = $this->getPermissionClass();
+
+        $this->permissions = $this->cache->remember(self::$cacheKey, self::$cacheExpirationTime, function () use ($permissionClass) {
+            // make the cache smaller using an array with only aliased required fields
+            $except = config('permission.cache.column_names_except', ['created_at','updated_at', 'deleted_at']);
+            $alias = $this->aliasModelsFields();
+            $aliasFlip = collect($alias)->flip()->except($except)->all();
+            $roles = [];
+            $permissions = $permissionClass->with('roles')->get()->map(function ($permission) use (&$roles, $aliasFlip, $except) {
+                return $this->aliasedFromArray($permission->getAttributes(), $aliasFlip)->except($except)->all() +
+                    [
+                        $aliasFlip['roles'] => $permission->roles->map(function ($role) use (&$roles, $aliasFlip, $except) {
+                            $id = $role->id;
+                            $roles[$id] = $roles[$id] ?? $this->aliasedFromArray($role->getAttributes(), $aliasFlip)->except($except)->all();
+
+                            return $id;
+                        })->all()
+                    ];
+            })->all();
+
+            return compact('alias', 'roles', 'permissions');
         });
 
-        if (is_array($this->permissions)) {
-            $this->permissions = $this->getPermissionClass()::hydrate(
-                collect($this->permissions)->map(function ($item) {
-                    return ['id' => $item['i'] ?? $item['id'], 'name' => $item['n'] ?? $item['name'], 'guard_name' => $item['g'] ?? $item['guard_name']];
-                })->all()
-            )
-            ->each(function ($permission, $i) {
-                $roles = Collection::make($this->permissions[$i]['r'] ?? $this->permissions[$i]['roles'] ?? [])
-                        ->map(function ($item) {
-                            return $this->getHydratedRole($item);
-                        });
+        if (! is_array($this->permissions) || ! isset($this->permissions['permissions'])) {
+            $this->forgetCachedPermissions();
 
-                $permission->setRelation('roles', $roles);
-            });
-
-            $this->cachedRoles = [];
+            return $this->loadPermissions();
         }
+
+        $this->permissions['roles'] = collect($this->permissions['roles'])->map(function ($item) use ($roleClass) {
+            return (new $roleClass)->newFromBuilder($this->aliasedFromArray($item, $this->permissions['alias'])->all());
+        });
+
+        $this->permissions = Collection::make($this->permissions['permissions'])
+            ->map(function ($item) use ($permissionClass) {
+                $aliased_item = $this->aliasedFromArray($item, $this->permissions['alias']);
+                $permission = (new $permissionClass)->newFromBuilder($aliased_item->except('roles')->all());
+                $permission->setRelation('roles', Collection::make($aliased_item['roles'])
+                    ->map(function ($id) {
+                        return $this->permissions['roles'][$id];
+                    }));
+
+                return $permission;
+            });
     }
 
     /**
@@ -257,21 +319,13 @@ class PermissionRegistrar
         return $this->cache->getStore();
     }
 
-    private function getHydratedRole(array $item)
+    /**
+     * Get the instance of the Cache Repository.
+     *
+     * @return \Illuminate\Cache\Repository
+     */
+    public function getCacheRepository(): \Illuminate\Cache\Repository
     {
-        $roleId = $item['i'] ?? $item['id'];
-
-        if (isset($this->cachedRoles[$roleId])) {
-            return $this->cachedRoles[$roleId];
-        }
-
-        $roleClass = $this->getRoleClass();
-        $roleInstance = new $roleClass();
-
-        return $this->cachedRoles[$roleId] = $roleInstance->newFromBuilder([
-            'id' => $roleId,
-            'name' => $item['n'] ?? $item['name'],
-            'guard_name' => $item['g'] ?? $item['guard_name'],
-        ]);
+        return $this->cache;
     }
 }
