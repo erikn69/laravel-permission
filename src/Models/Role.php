@@ -17,11 +17,12 @@ class Role extends Model implements RoleContract
     use HasPermissions;
     use RefreshesPermissionCache;
 
-    protected $guarded = ['id'];
+    protected $guarded = [];
 
     public function __construct(array $attributes = [])
     {
         $attributes['guard_name'] = $attributes['guard_name'] ?? config('auth.defaults.guard');
+        $this->guarded[] = $this->primaryKey;
 
         parent::__construct($attributes);
     }
@@ -96,7 +97,7 @@ class Role extends Model implements RoleContract
     {
         $guardName = $guardName ?? Guard::getDefaultName(static::class);
 
-        $role = static::where('id', $id)->where('guard_name', $guardName)->first();
+        $role = static::where((new static)->getKeyName(), $id)->where('guard_name', $guardName)->first();
 
         if (! $role) {
             throw RoleDoesNotExist::withId($id);
@@ -154,7 +155,8 @@ class Role extends Model implements RoleContract
         if (! $this->getGuardNames()->contains($permission->guard_name)) {
             throw GuardDoesNotMatch::create($permission->guard_name, $this->getGuardNames());
         }
+        $key = $this->getPermissionKeyName();
 
-        return $this->permissions->contains('id', $permission->id);
+        return $this->permissions->contains($key, $permission->$key);
     }
 }

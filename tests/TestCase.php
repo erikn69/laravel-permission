@@ -30,7 +30,7 @@ abstract class TestCase extends Orchestra
 
     /** @var \Spatie\Permission\Models\Permission */
     protected $testAdminPermission;
-    
+
     /** @var bool */
     protected $useCustomModels = false;
 
@@ -126,6 +126,12 @@ abstract class TestCase extends Orchestra
             });
             $app['db']->connection()->getSchemaBuilder()->table($app['config']->get('permission.table_names.permissions'), function (Blueprint $table) {
                 $table->string('type')->default('P');
+            });
+            $app['db']->connection()->getSchemaBuilder()->table($app['config']->get('permission.table_names.roles'), function (Blueprint $table) {
+                $table->renameColumn('id', 'role_id');
+            });
+            $app['db']->connection()->getSchemaBuilder()->table($app['config']->get('permission.table_names.permissions'), function (Blueprint $table) {
+                $table->renameColumn('id', 'permission_id');
             });
         }
 

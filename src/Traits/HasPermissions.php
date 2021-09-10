@@ -16,6 +16,7 @@ use Spatie\Permission\WildcardPermission;
 trait HasPermissions
 {
     private $permissionClass;
+    private $permissionKeyName;
 
     public static function bootHasPermissions()
     {
@@ -35,6 +36,16 @@ trait HasPermissions
         }
 
         return $this->permissionClass;
+    }
+    
+    public function getPermissionKeyName()
+    {
+        if (! isset($this->permissionKeyName)) {
+            $permissionClass = $this->getPermissionClass();
+            $this->permissionKeyName = (new $permissionClass)->getKeyName();
+        }
+
+        return $this->permissionKeyName;
     }
 
     /**
@@ -69,11 +80,14 @@ trait HasPermissions
 
         return $query->where(function (Builder $query) use ($permissions, $rolesWithPermissions) {
             $query->whereHas('permissions', function (Builder $subQuery) use ($permissions) {
-                $subQuery->whereIn(config('permission.table_names.permissions').'.id', \array_column($permissions, 'id'));
+                $key = $this->getPermissionKeyName();
+                $subQuery->whereIn(config('permission.table_names.permissions').'.'.$key, \array_column($permissions, $key));
             });
             if (count($rolesWithPermissions) > 0) {
                 $query->orWhereHas('roles', function (Builder $subQuery) use ($rolesWithPermissions) {
-                    $subQuery->whereIn(config('permission.table_names.roles').'.id', \array_column($rolesWithPermissions, 'id'));
+                    $roleClass = app(PermissionRegistrar::class)->getRoleClass();
+                    $key = (new $roleClass)->getKeyName();
+                    $subQuery->whereIn(config('permission.table_names.roles').'.'.$key, \array_column($rolesWithPermissions, $key));
                 });
             }
         });
@@ -281,8 +295,9 @@ trait HasPermissions
         if (! $permission instanceof Permission) {
             throw new PermissionDoesNotExist;
         }
+        $key = $this->getPermissionKeyName();
 
-        return $this->permissions->contains('id', $permission->id);
+        return $this->permissions->contains($key, $permission->$key);
     }
 
     /**
@@ -320,6 +335,8 @@ trait HasPermissions
      */
     public function givePermissionTo(...$permissions)
     {
+        $key = $this->getPermissionKeyName();
+
         $permissions = collect($permissions)
             ->flatten()
             ->map(function ($permission) {
@@ -335,7 +352,7 @@ trait HasPermissions
             ->each(function ($permission) {
                 $this->ensureModelSharesGuard($permission);
             })
-            ->map->id
+            ->map->$key
             ->all();
 
         $model = $this->getModel();

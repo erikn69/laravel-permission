@@ -168,17 +168,20 @@ class PermissionRegistrar
             return;
         }
 
-        $this->permissions = $this->cache->remember(self::$cacheKey, self::$cacheExpirationTime, function () {
+        $roleClass = $this->getRoleClass();
+        $permissionClass = $this->getPermissionClass();
+        $this->permissions = $this->cache->remember(self::$cacheKey, self::$cacheExpirationTime, function () use($roleClass, $permissionClass) {
             // make the cache smaller using an array with only aliased required fields
             $except = config('permission.cache.column_names_except', ['created_at','updated_at', 'deleted_at']);
             $alias = $this->aliasModelsFields();
             $aliasFlip = collect($alias)->flip()->except($except)->all();
+            $roleKey = (new $roleClass)->getKeyName();
             $roles = [];
-            $permissions = $this->getPermissionClass()->with('roles')->get()->map(function ($permission) use (&$roles, $aliasFlip, $except) {
+            $permissions = $permissionClass->with('roles')->get()->map(function ($permission) use (&$roles, $roleKey, $aliasFlip, $except) {
                 return $this->aliasedFromArray($permission->getAttributes(), $aliasFlip)->except($except)->all() +
                     [
-                        $aliasFlip['roles'] => $permission->roles->map(function ($role) use (&$roles, $aliasFlip, $except) {
-                            $id = $role->id;
+                        $aliasFlip['roles'] => $permission->roles->map(function ($role) use (&$roles, $roleKey, $aliasFlip, $except) {
+                            $id = $role->$roleKey;
                             $roles[$id] = $roles[$id] ?? $this->aliasedFromArray($role->getAttributes(), $aliasFlip)->except($except)->all();
 
                             return $id;
@@ -195,12 +198,10 @@ class PermissionRegistrar
             return $this->loadPermissions();
         }
 
-        $roleClass = $this->getRoleClass();
         $this->permissions['roles'] = collect($this->permissions['roles'])->map(function ($item) use ($roleClass) {
             return (new $roleClass)->newFromBuilder($this->aliasedFromArray($item, $this->permissions['alias'])->all());
         });
-
-        $permissionClass = $this->getPermissionClass();
+        
         $this->permissions = Collection::make($this->permissions['permissions'])
             ->map(function ($item) use ($permissionClass) {
                 $aliased_item = $this->aliasedFromArray($item, $this->permissions['alias'])->all();

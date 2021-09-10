@@ -13,6 +13,7 @@ trait HasRoles
     use HasPermissions;
 
     private $roleClass;
+    private $roleKeyName;
 
     public static function bootHasRoles()
     {
@@ -32,6 +33,16 @@ trait HasRoles
         }
 
         return $this->roleClass;
+    }
+    
+    public function getRoleKeyName()
+    {
+        if (! isset($this->roleKeyName)) {
+            $roleClass = $this->getRoleClass();
+            $this->roleKeyName = (new $roleClass)->getKeyName();
+        }
+
+        return $this->roleKeyName;
     }
 
     /**
@@ -79,7 +90,8 @@ trait HasRoles
         }, $roles);
 
         return $query->whereHas('roles', function (Builder $subQuery) use ($roles) {
-            $subQuery->whereIn(config('permission.table_names.roles').'.id', \array_column($roles, 'id'));
+            $key = $this->getRoleKeyName();
+            $subQuery->whereIn(config('permission.table_names.roles').'.'.$key, \array_column($roles, $key));
         });
     }
 
@@ -92,6 +104,8 @@ trait HasRoles
      */
     public function assignRole(...$roles)
     {
+        $key = $this->getRoleKeyName();
+
         $roles = collect($roles)
             ->flatten()
             ->map(function ($role) {
@@ -107,7 +121,7 @@ trait HasRoles
             ->each(function ($role) {
                 $this->ensureModelSharesGuard($role);
             })
-            ->map->id
+            ->map->$key
             ->all();
 
         $model = $this->getModel();
@@ -184,13 +198,15 @@ trait HasRoles
         }
 
         if (is_int($roles)) {
+            $key = $this->getRoleKeyName();
             return $guard
-                ? $this->roles->where('guard_name', $guard)->contains('id', $roles)
-                : $this->roles->contains('id', $roles);
+                ? $this->roles->where('guard_name', $guard)->contains($key, $roles)
+                : $this->roles->contains($key, $roles);
         }
 
         if ($roles instanceof Role) {
-            return $this->roles->contains('id', $roles->id);
+            $key = $this->getRoleKeyName();
+            return $this->roles->contains($key, $roles->$key);
         }
 
         if (is_array($roles)) {
@@ -240,7 +256,8 @@ trait HasRoles
         }
 
         if ($roles instanceof Role) {
-            return $this->roles->contains('id', $roles->id);
+            $key = $this->getRoleKeyName();
+            return $this->roles->contains($key, $roles->$key);
         }
 
         $roles = collect()->make($roles)->map(function ($role) {

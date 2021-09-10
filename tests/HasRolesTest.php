@@ -8,12 +8,18 @@ use Spatie\Permission\Exceptions\RoleDoesNotExist;
 
 class HasRolesTest extends TestCase
 {
+    protected function getRoleKeyName()
+    {
+        $roleClass = app(Role::class);
+        return (new $roleClass)->getKeyName();
+    }
     /** @test */
     public function it_can_determine_that_the_user_does_not_have_a_role()
     {
         $this->assertFalse($this->testUser->hasRole('testRole'));
 
         $role = app(Role::class)->findOrCreate('testRoleInWebGuard', 'web');
+        $key = $this->getRoleKeyName();
 
         $this->assertFalse($this->testUser->hasRole($role));
 
@@ -22,13 +28,13 @@ class HasRolesTest extends TestCase
         $this->assertTrue($this->testUser->hasRole($role->name));
         $this->assertTrue($this->testUser->hasRole($role->name, $role->guard_name));
         $this->assertTrue($this->testUser->hasRole([$role->name, 'fakeRole'], $role->guard_name));
-        $this->assertTrue($this->testUser->hasRole($role->id, $role->guard_name));
-        $this->assertTrue($this->testUser->hasRole([$role->id, 'fakeRole'], $role->guard_name));
+        $this->assertTrue($this->testUser->hasRole($role->$key, $role->guard_name));
+        $this->assertTrue($this->testUser->hasRole([$role->$key, 'fakeRole'], $role->guard_name));
 
         $this->assertFalse($this->testUser->hasRole($role->name, 'fakeGuard'));
         $this->assertFalse($this->testUser->hasRole([$role->name, 'fakeRole'], 'fakeGuard'));
-        $this->assertFalse($this->testUser->hasRole($role->id, 'fakeGuard'));
-        $this->assertFalse($this->testUser->hasRole([$role->id, 'fakeRole'], 'fakeGuard'));
+        $this->assertFalse($this->testUser->hasRole($role->$key, 'fakeGuard'));
+        $this->assertFalse($this->testUser->hasRole([$role->$key, 'fakeRole'], 'fakeGuard'));
 
         $role = app(Role::class)->findOrCreate('testRoleInWebGuard2', 'web');
         $this->assertFalse($this->testUser->hasRole($role));
@@ -87,7 +93,8 @@ class HasRolesTest extends TestCase
     /** @test */
     public function it_can_assign_a_role_using_an_id()
     {
-        $this->testUser->assignRole($this->testUserRole->id);
+        $key = $this->getRoleKeyName();
+        $this->testUser->assignRole($this->testUserRole->$key);
 
         $this->assertTrue($this->testUser->hasRole($this->testUserRole));
     }
@@ -95,7 +102,8 @@ class HasRolesTest extends TestCase
     /** @test */
     public function it_can_assign_multiple_roles_at_once()
     {
-        $this->testUser->assignRole($this->testUserRole->id, 'testRole2');
+        $key = $this->getRoleKeyName();
+        $this->testUser->assignRole($this->testUserRole->$key, 'testRole2');
 
         $this->assertTrue($this->testUser->hasRole('testRole'));
 
@@ -105,7 +113,8 @@ class HasRolesTest extends TestCase
     /** @test */
     public function it_can_assign_multiple_roles_using_an_array()
     {
-        $this->testUser->assignRole([$this->testUserRole->id, 'testRole2']);
+        $key = $this->getRoleKeyName();
+        $this->testUser->assignRole([$this->testUserRole->$key, 'testRole2']);
 
         $this->assertTrue($this->testUser->hasRole('testRole'));
 
@@ -115,7 +124,8 @@ class HasRolesTest extends TestCase
     /** @test */
     public function it_does_not_remove_already_associated_roles_when_assigning_new_roles()
     {
-        $this->testUser->assignRole($this->testUserRole->id);
+        $key = $this->getRoleKeyName();
+        $this->testUser->assignRole($this->testUserRole->$key);
 
         $this->testUser->assignRole('testRole2');
 
@@ -125,9 +135,10 @@ class HasRolesTest extends TestCase
     /** @test */
     public function it_does_not_throw_an_exception_when_assigning_a_role_that_is_already_assigned()
     {
-        $this->testUser->assignRole($this->testUserRole->id);
+        $key = $this->getRoleKeyName();
+        $this->testUser->assignRole($this->testUserRole->$key);
 
-        $this->testUser->assignRole($this->testUserRole->id);
+        $this->testUser->assignRole($this->testUserRole->$key);
 
         $this->assertTrue($this->testUser->fresh()->hasRole('testRole'));
     }
@@ -350,7 +361,8 @@ class HasRolesTest extends TestCase
 
         $roleName = $this->testUserRole->name;
 
-        $otherRoleId = app(Role::class)->find(2)->id;
+        $key = $this->getRoleKeyName();
+        $otherRoleId = app(Role::class)->find(2)->$key;
 
         $scopedUsers = User::role([$roleName, $otherRoleId])->get();
 

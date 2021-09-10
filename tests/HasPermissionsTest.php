@@ -9,6 +9,12 @@ use Spatie\Permission\Exceptions\PermissionDoesNotExist;
 
 class HasPermissionsTest extends TestCase
 {
+    protected function getPermissionKeyName()
+    {
+        $permissionClass = app(Permission::class);
+        return (new $permissionClass)->getKeyName();
+    }
+
     /** @test */
     public function it_can_assign_a_permission_to_a_user()
     {
@@ -402,7 +408,7 @@ class HasPermissionsTest extends TestCase
     {
         $this->testUser->givePermissionTo('edit-news');
 
-        $ids = app(Permission::class)::whereIn('name', ['edit-articles', 'edit-blog'])->pluck('id');
+        $ids = app(Permission::class)::whereIn('name', ['edit-articles', 'edit-blog'])->pluck($this->getPermissionKeyName());
 
         $this->testUser->syncPermissions($ids);
 
@@ -418,7 +424,7 @@ class HasPermissionsTest extends TestCase
     {
         $this->testUser->givePermissionTo('edit-news');
 
-        $ids = app(Permission::class)::whereIn('name', ['edit-articles', 'edit-blog'])->pluck('id');
+        $ids = app(Permission::class)::whereIn('name', ['edit-articles', 'edit-blog'])->pluck($this->getPermissionKeyName());
 
         $ids->push(null);
 
