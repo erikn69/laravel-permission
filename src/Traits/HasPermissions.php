@@ -76,11 +76,13 @@ trait HasPermissions
 
         return $query->where(function (Builder $query) use ($permissions, $rolesWithPermissions) {
             $query->whereHas('permissions', function (Builder $subQuery) use ($permissions) {
-                $subQuery->whereIn(config('permission.table_names.permissions').'.id', \array_column($permissions, 'id'));
+                $key = app(PermissionRegistrar::class)->getPermissionKeyName();
+                $subQuery->whereIn(config('permission.table_names.permissions').'.'.$key, \array_column($permissions, $key));
             });
             if (count($rolesWithPermissions) > 0) {
                 $query->orWhereHas('roles', function (Builder $subQuery) use ($rolesWithPermissions) {
-                    $subQuery->whereIn(config('permission.table_names.roles').'.id', \array_column($rolesWithPermissions, 'id'));
+                    $key = app(PermissionRegistrar::class)->getRoleKeyName();
+                    $subQuery->whereIn(config('permission.table_names.roles').'.'.$key, \array_column($rolesWithPermissions, $key));
                 });
             }
         });
@@ -104,7 +106,7 @@ trait HasPermissions
             if ($permission instanceof Permission) {
                 return $permission;
             }
-            $method = is_string($permission) ? 'findByName' : 'findById';
+            $method = is_string($permission) && ! \Str::isUuid($permission) ? 'findByName' : 'findById';
 
             return $this->getPermissionClass()->{$method}($permission, $this->getDefaultGuardName());
         }, $permissions);
@@ -127,14 +129,14 @@ trait HasPermissions
 
         $permissionClass = $this->getPermissionClass();
 
-        if (is_string($permission)) {
+        if (is_string($permission) && ! \Str::isUuid($permission)) {
             $permission = $permissionClass->findByName(
                 $permission,
                 $guardName ?? $this->getDefaultGuardName()
             );
         }
 
-        if (is_int($permission)) {
+        if (is_int($permission) || is_string($permission)) {
             $permission = $permissionClass->findById(
                 $permission,
                 $guardName ?? $this->getDefaultGuardName()
@@ -160,7 +162,7 @@ trait HasPermissions
     {
         $guardName = $guardName ?? $this->getDefaultGuardName();
 
-        if (is_int($permission)) {
+        if (is_int($permission) || \Str::isUuid($permission)) {
             $permission = $this->getPermissionClass()->findById($permission, $guardName);
         }
 
@@ -269,11 +271,11 @@ trait HasPermissions
     {
         $permissionClass = $this->getPermissionClass();
 
-        if (is_string($permission)) {
+        if (is_string($permission) && ! \Str::isUuid($permission)) {
             $permission = $permissionClass->findByName($permission, $this->getDefaultGuardName());
         }
 
-        if (is_int($permission)) {
+        if (is_int($permission) || is_string($permission)) {
             $permission = $permissionClass->findById($permission, $this->getDefaultGuardName());
         }
 
@@ -281,7 +283,7 @@ trait HasPermissions
             throw new PermissionDoesNotExist();
         }
 
-        return $this->permissions->contains('id', $permission->id);
+        return $this->permissions->contains($permission->getKeyName(), $permission->getKey());
     }
 
     /**
@@ -350,11 +352,11 @@ trait HasPermissions
                 $this->ensureModelSharesGuard($permission);
             })
             ->map(function ($permission) {
-                return ['id' => $permission->id, 'values' => PermissionRegistrar::$teams && ! is_a($this, Role::class) ?
+                return [$permission->getKeyName() => $permission->getKey(), 'values' => PermissionRegistrar::$teams && ! is_a($this, Role::class) ?
                     [PermissionRegistrar::$teamsKey => app(PermissionRegistrar::class)->getPermissionsTeamId()] : [],
                 ];
             })
-            ->pluck('values', 'id')->toArray();
+            ->pluck('values', app(PermissionRegistrar::class)->getPermissionKeyName())->toArray();
 
         $model = $this->getModel();
 
@@ -430,7 +432,7 @@ trait HasPermissions
     {
         $permissionClass = $this->getPermissionClass();
 
-        if (is_numeric($permissions)) {
+        if (is_numeric($permissions) || \Str::isUuid($permissions)) {
             return $permissionClass->findById($permissions, $this->getDefaultGuardName());
         }
 
