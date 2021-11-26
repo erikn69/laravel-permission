@@ -5,6 +5,8 @@ namespace Spatie\Permission;
 use Illuminate\Cache\CacheManager;
 use Illuminate\Contracts\Auth\Access\Authorizable;
 use Illuminate\Contracts\Auth\Access\Gate;
+use Illuminate\Contracts\Cache\Repository;
+use Illuminate\Contracts\Cache\Store;
 use Illuminate\Database\Eloquent\Collection;
 use Spatie\Permission\Contracts\Permission;
 use Spatie\Permission\Contracts\Role;
@@ -76,11 +78,15 @@ class PermissionRegistrar
         self::$pivotRole = config('permission.column_names.role_pivot_key') ?: 'role_id';
         self::$pivotPermission = config('permission.column_names.permission_pivot_key') ?: 'permission_id';
 
-        $this->cache = $this->getCacheStoreFromConfig();
+        $this->cache = $this->getCacheRepository();
     }
 
-    protected function getCacheStoreFromConfig(): \Illuminate\Contracts\Cache\Repository
+    public function getCacheRepository(): Repository
     {
+        if (is_a($this->cache, Repository::class)) {
+            return $this->cache;
+        }
+
         // the 'default' fallback here is from the permission.php config file,
         // where 'default' means to use config(cache.default)
         $cacheDriver = config('permission.cache.store', 'default');
@@ -265,12 +271,7 @@ class PermissionRegistrar
         return $this;
     }
 
-    /**
-     * Get the instance of the Cache Store.
-     *
-     * @return \Illuminate\Contracts\Cache\Store
-     */
-    public function getCacheStore(): \Illuminate\Contracts\Cache\Store
+    public function getCacheStore(): Store
     {
         return $this->cache->getStore();
     }
