@@ -2,6 +2,7 @@
 
 namespace Spatie\Permission\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Permission\Contracts\Role as RoleContract;
@@ -83,6 +84,41 @@ class Role extends Model implements RoleContract
             app(PermissionRegistrar::class)->pivotRole,
             config('permission.column_names.model_morph_key')
         );
+    }
+
+    /**
+     * Scope the model query to certain user(and team) only.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  int|string|\Illuminate\Database\Eloquent\Model  $userId
+     * @param  null|int|string|\Illuminate\Database\Eloquent\Model  $teamId
+     */
+    public function scopeUser(Builder $query, $userId, $teamId = null): Builder
+    {
+        if ($userId instanceof Model) {
+            $userId = $userId->getKey();
+        }
+
+        if ($teamId instanceof Model) {
+            $teamId = $teamId->getKey();
+        }
+
+        if (app(PermissionRegistrar::class)->teams) {
+            $teamId = $teamId ?: getPermissionsTeamId();
+
+            $query->where(function ($query) use ($teamId) {
+                $query->whereNull(app(PermissionRegistrar::class)->teamsKey)
+                    ->orWhere(app(PermissionRegistrar::class)->teamsKey, $teamId);
+            });
+        }
+
+        return $query->whereHas('users', function ($query) use ($userId, $teamId) {
+            $query->where(config('permission.table_names.model_has_roles').'.'.config('permission.column_names.model_morph_key'), $userId);
+
+            if (app(PermissionRegistrar::class)->teams) {
+                $query->where(app(PermissionRegistrar::class)->teamsKey, $teamId);
+            }
+        });
     }
 
     /**
