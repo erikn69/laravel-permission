@@ -108,7 +108,7 @@ trait HasPermissions
             if ($permission instanceof Permission) {
                 return $permission;
             }
-            $method = is_string($permission) ? 'findByName' : 'findById';
+            $method = is_string($permission) && ! \Str::isUuid($permission) ? 'findByName' : 'findById';
 
             return $this->getPermissionClass()->{$method}($permission, $this->getDefaultGuardName());
         }, Arr::wrap($permissions));
@@ -131,14 +131,14 @@ trait HasPermissions
 
         $permissionClass = $this->getPermissionClass();
 
-        if (is_string($permission)) {
+        if (is_string($permission) && ! \Str::isUuid($permission)) {
             $permission = $permissionClass->findByName(
                 $permission,
                 $guardName ?? $this->getDefaultGuardName()
             );
         }
 
-        if (is_int($permission)) {
+        if (is_int($permission) || is_string($permission)) {
             $permission = $permissionClass->findById(
                 $permission,
                 $guardName ?? $this->getDefaultGuardName()
@@ -164,7 +164,7 @@ trait HasPermissions
     {
         $guardName = $guardName ?? $this->getDefaultGuardName();
 
-        if (is_int($permission)) {
+        if (is_int($permission) || \Str::isUuid($permission)) {
             $permission = $this->getPermissionClass()->findById($permission, $guardName);
         }
 
@@ -273,11 +273,11 @@ trait HasPermissions
     {
         $permissionClass = $this->getPermissionClass();
 
-        if (is_string($permission)) {
+        if (is_string($permission) && ! \Str::isUuid($permission)) {
             $permission = $permissionClass->findByName($permission, $this->getDefaultGuardName());
         }
 
-        if (is_int($permission)) {
+        if (is_int($permission) || is_string($permission)) {
             $permission = $permissionClass->findById($permission, $this->getDefaultGuardName());
         }
 
@@ -417,7 +417,7 @@ trait HasPermissions
     {
         $permissionClass = $this->getPermissionClass();
 
-        if (is_numeric($permissions)) {
+        if (is_numeric($permissions) || \Str::isUuid($permissions)) {
             return $permissionClass->findById($permissions, $this->getDefaultGuardName());
         }
 
