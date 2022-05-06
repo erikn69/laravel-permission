@@ -162,12 +162,20 @@ abstract class TestCase extends Orchestra
                 'bigIncrements',
                 'unsignedBigInteger(PermissionRegistrar::$pivotRole)',
                 'unsignedBigInteger(PermissionRegistrar::$pivotPermission)',
+                '(\'id\'); // permission id',
+                '(\'id\'); // role id',
+                'references(\'id\') // permission id',
+                'references(\'id\') // role id',
             ],
             [
                 'CreatePermissionCustomTables',
                 'uuid',
                 'uuid(PermissionRegistrar::$pivotRole)->nullable(false)',
                 'uuid(PermissionRegistrar::$pivotPermission)->nullable(false)',
+                '(\'permission_test_id\');',
+                '(\'role_test_id\');',
+                'references(\'permission_test_id\')',
+                'references(\'role_test_id\')',
             ],
             file_get_contents(__DIR__.'/../database/migrations/create_permission_tables.php.stub')
         );
