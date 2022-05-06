@@ -140,6 +140,13 @@ abstract class TestCase extends Orchestra
             include_once __DIR__.'/CreatePermissionCustomTables.php';
 
             (new \CreatePermissionCustomTables())->up();
+
+            $app['db']->connection()->getSchemaBuilder()->table($app['config']->get('permission.table_names.roles'), function (Blueprint $table) {
+                $table->string('type')->default('R');
+            });
+            $app['db']->connection()->getSchemaBuilder()->table($app['config']->get('permission.table_names.permissions'), function (Blueprint $table) {
+                $table->string('type')->default('P');
+            });
         }
 
         $this->testUser = User::create(['email' => 'test@user.com']);
