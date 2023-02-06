@@ -23,11 +23,13 @@ class PermissionServiceProvider extends ServiceProvider
 
         $this->registerModelBindings();
 
+        PermissionRegistrar::initializeStaticValues();
+        if ($this->app->config['permission.register_permission_check_method']) {
+            PermissionRegistrar::registerPermissions();
+        }
+
         $this->callAfterResolving(PermissionRegistrar::class, function (PermissionRegistrar $permissionLoader) {
-            if ($this->app->config['permission.register_permission_check_method']) {
-                $permissionLoader->clearClassPermissions();
-                $permissionLoader->registerPermissions();
-            }
+            $permissionLoader->clearClassPermissions();
         });
 
         $this->app->singleton(PermissionRegistrar::class);

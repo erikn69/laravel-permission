@@ -72,7 +72,7 @@ class PermissionRegistrar
         $this->initializeCache();
     }
 
-    public function initializeCache()
+    public static function initializeStaticValues()
     {
         self::$cacheExpirationTime = config('permission.cache.expiration_time') ?: \DateInterval::createFromDateString('24 hours');
 
@@ -83,7 +83,11 @@ class PermissionRegistrar
 
         self::$pivotRole = config('permission.column_names.role_pivot_key') ?: 'role_id';
         self::$pivotPermission = config('permission.column_names.permission_pivot_key') ?: 'permission_id';
+    }
 
+    public function initializeCache()
+    {
+        self::initializeStaticValues();
         $this->cache = $this->getCacheStoreFromConfig();
     }
 
@@ -133,7 +137,7 @@ class PermissionRegistrar
      *
      * @return bool
      */
-    public function registerPermissions(): bool
+    public static function registerPermissions(): bool
     {
         app(Gate::class)->before(function (Authorizable $user, string $ability) {
             if (method_exists($user, 'checkPermissionTo')) {
