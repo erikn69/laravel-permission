@@ -67,10 +67,8 @@ trait HasRoles
     /**
      * Scope the model query to certain roles only.
      *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @param  string|int|array|\Spatie\Permission\Contracts\Role|\Illuminate\Support\Collection  $roles
      * @param  string  $guard
-     * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeRole(Builder $query, $roles, $guard = null): Builder
     {
@@ -94,7 +92,6 @@ trait HasRoles
             $subQuery->whereIn(config('permission.table_names.roles').".$key", \array_column($roles, $key));
         });
     }
-
 
     /**
      * Returns roles ids as array keys
@@ -198,8 +195,6 @@ trait HasRoles
      * Determine if the model has (one of) the given role(s).
      *
      * @param  string|int|array|\Spatie\Permission\Contracts\Role|\Illuminate\Support\Collection  $roles
-     * @param  string|null  $guard
-     * @return bool
      */
     public function hasRole($roles, string $guard = null): bool
     {
@@ -247,7 +242,6 @@ trait HasRoles
      * Alias to hasRole() but without Guard controls
      *
      * @param  string|int|array|\Spatie\Permission\Contracts\Role|\Illuminate\Support\Collection  $roles
-     * @return bool
      */
     public function hasAnyRole(...$roles): bool
     {
@@ -258,8 +252,6 @@ trait HasRoles
      * Determine if the model has all of the given role(s).
      *
      * @param  string|array|\Spatie\Permission\Contracts\Role|\Illuminate\Support\Collection  $roles
-     * @param  string|null  $guard
-     * @return bool
      */
     public function hasAllRoles($roles, string $guard = null): bool
     {
@@ -294,8 +286,6 @@ trait HasRoles
      * Determine if the model has exactly all of the given role(s).
      *
      * @param  string|array|\Spatie\Permission\Contracts\Role|\Illuminate\Support\Collection  $roles
-     * @param  string|null  $guard
-     * @return bool
      */
     public function hasExactRoles($roles, string $guard = null): bool
     {
