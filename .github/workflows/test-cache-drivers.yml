@@ -32,23 +32,36 @@ jobs:
 
       - name: Install dependencies
         run: |
-          composer require "laravel/framework" "predis/predis" --no-interaction --no-update
+          composer require "predis/predis" --no-interaction --no-update
           composer update --prefer-stable --prefer-dist --no-interaction
+
+      - name: Execute tests - memcached cache driver
+        run: |
+          vendor/bin/phpunit
+        env:
+          CACHE_DRIVER: memcached
 
       - name: Execute tests - redis cache driver
         run: |
-          CACHE_DRIVER="redis" vendor/bin/phpunit
+          vendor/bin/phpunit
         env:
+          CACHE_DRIVER: redis
           REDIS_PORT: ${{ job.services.redis.ports['6379'] }}
 
       - name: Execute tests - database cache driver
         run: |
-          CACHE_DRIVER="database" vendor/bin/phpunit
+          vendor/bin/phpunit
+        env:
+          CACHE_DRIVER: database
 
       - name: Execute tests - file cache driver
         run: |
-          CACHE_DRIVER="file" vendor/bin/phpunit
+          vendor/bin/phpunit
+        env:
+          CACHE_DRIVER: file
 
       - name: Execute tests - array cache driver
         run: |
-          CACHE_DRIVER="array" vendor/bin/phpunit
+          vendor/bin/phpunit
+        env:
+          CACHE_DRIVER: array

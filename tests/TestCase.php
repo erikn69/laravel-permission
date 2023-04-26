@@ -112,7 +112,7 @@ abstract class TestCase extends Orchestra
 
         $app['config']->set('cache.prefix', 'spatie_tests---');
         $app['config']->set('cache.default', getenv('CACHE_DRIVER') ?: 'array');
-
+echo $app['config']->get('cache.default');
         // FOR MANUAL TESTING OF ALTERNATE CACHE STORES:
         // $app['config']->set('cache.default', 'array');
         //Laravel supports: array, database, file
