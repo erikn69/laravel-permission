@@ -15,14 +15,8 @@ class RoleMiddleware
 
         // For machine-to-machine Passport clients
         $bearerToken = $request->bearerToken();
-        if ($bearerToken) {
-            if (! $authGuard instanceof TokenGuard && ! $guard) {
-                $authGuard = Auth::guard('api');
-            }
-
-            if (method_exists($authGuard, 'client')) {
-                $user = $authGuard->client();
-            }
+        if ($bearerToken && method_exists($authGuard, 'client')) {
+            $user = $authGuard->client();
         }
 
         $user = $user ?? $authGuard->user();

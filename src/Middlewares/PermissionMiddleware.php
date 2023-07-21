@@ -15,20 +15,18 @@ class PermissionMiddleware
 
         // For machine-to-machine Passport clients
         $bearerToken = $request->bearerToken();
-        if ($bearerToken) {
-            if (! $authGuard instanceof TokenGuard && ! $guard) {
-                $authGuard = Auth::guard('api');
-            }
-
-            if (method_exists($authGuard, 'client')) {
-                $user = $authGuard->client();
-            }
+        if ($bearerToken && method_exists($authGuard, 'client')) {
+            $user = $authGuard->client();
         }
 
         $user = $user ?? $authGuard->user();
 
         if (! $user) {
             throw UnauthorizedException::notLoggedIn();
+        }
+
+        if (! method_exists($user, 'canAny')) {
+            throw UnauthorizedException::missingTraitAuthorizable($user);
         }
 
         if (! method_exists($user, 'hasAnyPermission')) {

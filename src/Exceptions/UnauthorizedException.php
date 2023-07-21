@@ -60,6 +60,13 @@ class UnauthorizedException extends HttpException
         return new static(403, "Authorizable class `{$class}` must use Spatie\Permission\Traits\HasRoles trait.", null, []);
     }
 
+    public static function missingTraitAuthorizable($user): self
+    {
+        $class = get_class($user);
+
+        return new static(403, "Class `{$class}` must use \Illuminate\Contracts\Auth\Access\Authorizable trait.", null, []);
+    }
+
     public static function notLoggedIn(): self
     {
         return new static(403, 'User is not logged in.', null, []);
