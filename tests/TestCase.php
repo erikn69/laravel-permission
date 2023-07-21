@@ -192,6 +192,7 @@ abstract class TestCase extends Orchestra
         if ($this->getLaravelVersion() < 9) {
             return;
         }
+        $app['config']->set('passport.storage.database.connection', 'sqlite');
         $app['config']->set('auth.guards.api', ['driver' => 'passport', 'provider' => 'users']);
 
         $this->artisan('migrate');
@@ -264,7 +265,7 @@ abstract class TestCase extends Orchestra
     {
         $request = new Request;
         if ($client) {
-            $request->headers->set('Authorization', 'Bearer '.str()->random(30));
+            $request->headers->set('Authorization', 'Bearer ' . \Str::random(30));
         }
 
         try {
@@ -294,6 +295,6 @@ abstract class TestCase extends Orchestra
     }
     protected function getLaravelVersion()
     {
-        return (float) app()->version();
+        return (float) 10;
     }
 }
