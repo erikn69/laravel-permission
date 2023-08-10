@@ -158,7 +158,7 @@ class PermissionRegistrar
         if (isset($this->wildcardPermissionsIndex[get_class($record)][$record->getKey()])) {
             return $this->wildcardPermissionsIndex[get_class($record)][$record->getKey()];
         }
-
+        // @phpstan-ignore-next-line
         return $this->wildcardPermissionsIndex[get_class($record)][$record->getKey()] = app($record->getWildcardClass(), ['record' => $record])->getIndex();
     }
 

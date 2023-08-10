@@ -28,7 +28,7 @@ class WildcardPermission implements Wildcard
     public function getIndex(): array
     {
         $index = [];
-
+        // @phpstan-ignore-next-line
         foreach ($this->record->getAllPermissions() as $permission) {
             $index[$permission->guard_name] = $this->buildIndex(
                 $index[$permission->guard_name] ?? [],
