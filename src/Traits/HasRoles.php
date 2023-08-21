@@ -91,8 +91,7 @@ trait HasRoles
             return $this->getRoleClass()::{$method}($role, $guard ?: $this->getDefaultGuardName());
         }, Arr::wrap($roles));
 
-        $roleClass = $this->getRoleClass();
-        $key = (new $roleClass())->getKeyName();
+        $key = (new ($this->getRoleClass()))->getKeyName();
 
         return $query->whereHas('roles', fn (Builder $subQuery) => $subQuery
             ->whereIn(config('permission.table_names.roles').".$key", \array_column($roles, $key))
@@ -125,8 +124,7 @@ trait HasRoles
             return $this->getRoleClass()::{$method}($role, $guard ?: $this->getDefaultGuardName());
         }, Arr::wrap($roles));
 
-        $roleClass = $this->getRoleClass();
-        $key = (new $roleClass())->getKeyName();
+        $key = (new ($this->getRoleClass()))->getKeyName();
 
         return $query->whereDoesntHave('roles', fn (Builder $subQuery) => $subQuery
             ->whereIn(config('permission.table_names.roles').".$key", \array_column($roles, $key))
@@ -253,8 +251,7 @@ trait HasRoles
         }
 
         if (is_int($roles) || PermissionRegistrar::isUid($roles)) {
-            $roleClass = $this->getRoleClass();
-            $key = (new $roleClass())->getKeyName();
+            $key = (new ($this->getRoleClass()))->getKeyName();
 
             return $guard
                 ? $this->roles->where('guard_name', $guard)->contains($key, $roles)

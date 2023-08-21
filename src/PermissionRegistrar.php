@@ -98,11 +98,11 @@ class PermissionRegistrar
     /**
      * Set the team id for teams/groups support, this id is used when querying permissions/roles
      *
-     * @param  int|string|\Illuminate\Database\Eloquent\Model  $id
+     * @param  int|string|Model  $id
      */
     public function setPermissionsTeamId($id): void
     {
-        if ($id instanceof \Illuminate\Database\Eloquent\Model) {
+        if ($id instanceof Model) {
             $id = $id->getKey();
         }
         $this->teamId = $id;
