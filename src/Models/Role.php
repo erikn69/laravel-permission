@@ -43,6 +43,7 @@ class Role extends Model implements RoleContract
     public static function create(array $attributes = [])
     {
         $attributes['guard_name'] = $attributes['guard_name'] ?? Guard::getDefaultName(static::class);
+        $attributes['name'] = $attributes['name'] instanceof \BackedEnum ? $attributes['name']->value : $attributes['name'];
 
         $params = ['name' => $attributes['name'], 'guard_name' => $attributes['guard_name']];
         if (app(PermissionRegistrar::class)->teams) {

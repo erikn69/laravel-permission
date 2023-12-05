@@ -42,6 +42,7 @@ class Permission extends Model implements PermissionContract
     public static function create(array $attributes = [])
     {
         $attributes['guard_name'] = $attributes['guard_name'] ?? Guard::getDefaultName(static::class);
+        $attributes['name'] = $attributes['name'] instanceof \BackedEnum ? $attributes['name']->value : $attributes['name'];
 
         $permission = static::getPermission(['name' => $attributes['name'], 'guard_name' => $attributes['guard_name']]);
 
